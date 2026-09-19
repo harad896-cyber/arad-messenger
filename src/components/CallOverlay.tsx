@@ -99,6 +99,26 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
   }
 
   useEffect(() => {
+    if (incoming || !session) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const { data } = await (supabase as any).from("call_sessions").select("*").eq("id", session.id).single();
+        if (!data) return;
+        if (data.status === "ended" || data.status === "rejected" || data.status === "failed") {
+          await finish(false);
+          return;
+        }
+        if (data.answer_sdp && pc.current && !pc.current.remoteDescription) {
+          await pc.current.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer_sdp)));
+          for (const candidate of pendingCandidates.current.splice(0)) await pc.current.addIceCandidate(candidate);
+          setStatus("متصل");
+        }
+      } catch {}
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, [incoming, session?.id]);
+
+  useEffect(() => {
     if (incoming || session) return;
     let cancelled = false;
     (async () => {
