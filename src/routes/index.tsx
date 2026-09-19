@@ -388,6 +388,7 @@ function Messenger() {
         </>}
       </main>
 
+      {showAdvanced && <AdvancedPanel userId={session.id} profile={profile} conversations={conversations} active={active} close={()=>setShowAdvanced(false)} onOpenConversation={async (userId)=>{ const p=(await loadProfiles([userId]))[0]; if(p){ await startDirect(p); setShowAdvanced(false); } }} onRefresh={async()=>setConversations(await loadConversations(session.id))} notify={showNotice} />}
       {showMembers && active && <MembersPanel conversation={active} currentUserId={session.id} profiles={profiles} close={()=>setShowMembers(false)} onAdded={async()=>{setConversations(await loadConversations(session.id));}} search={memberSearch} setSearch={setMemberSearch} notify={showNotice} />}
       {showNew && <NewConversationPanel currentUserId={session.id} close={()=>setShowNew(false)} groupName={newGroupName} setGroupName={setNewGroupName} selected={newGroupMembers} setSelected={setNewGroupMembers} onGroup={createNewGroup} onDirect={startDirect} />}
       {call && <CallOverlay userId={session.id} profile={profile} conversation={call.conversation ?? active} type={call.type ?? call.session?.call_type ?? "voice"} incoming={call.incoming} incomingSession={call.session} onClose={()=>setCall(null)} />}
