@@ -103,71 +103,28 @@ export async function searchProfiles(term: string, currentUserId: string) {
   return (data ?? []) as Profile[];
 }
 
-export async function createDirectConversation(currentUserId: string, otherUserId: string) {
-  const { data: existingMembers, error: memberError } = await db
-    .from("conversation_members")
-    .select("conversation_id")
-    .eq("user_id", currentUserId);
-  if (memberError) throw memberError;
-
-  for (const row of existingMembers ?? []) {
-    const { data: conv } = await db.from("conversations")
-      .select("id,type")
-      .eq("id", row.conversation_id)
-      .eq("type", "direct")
-      .maybeSingle();
-    if (!conv) continue;
-    const { data: other } = await db.from("conversation_members")
-      .select("user_id")
-      .eq("conversation_id", row.conversation_id)
-      .eq("user_id", otherUserId)
-      .maybeSingle();
-    if (other) return conv.id as string;
-  }
-
-  const { data: conv, error } = await db.from("conversations").insert({
-    type: "direct",
-    created_by: currentUserId,
-    allow_member_add: false,
-  }).select().single();
+export async function createDirectConversation(_currentUserId: string, otherUserId: string) {
+  const { data, error } = await db.rpc("start_private_conversation", { _other_user: otherUserId });
   if (error) throw error;
-
-  const { error: membersError } = await db.from("conversation_members").insert([
-    { conversation_id: conv.id, user_id: currentUserId, role: "admin" },
-    { conversation_id: conv.id, user_id: otherUserId, role: "member" },
-  ]);
-  if (membersError) throw membersError;
-  return conv.id as string;
+  return data as string;
 }
 
-export async function createGroup(currentUserId: string, title: string, memberIds: string[]) {
-  const { data: conv, error } = await db.from("conversations").insert({
-    type: "group",
-    title: title.trim().slice(0, 100),
-    created_by: currentUserId,
-    allow_member_add: true,
-  }).select().single();
+export async function createGroup(_currentUserId: string, title: string, memberIds: string[]) {
+  const { data, error } = await db.rpc("create_group_conversation", {
+    _kind: "group",
+    _title: title.trim().slice(0, 100),
+    _bio: null,
+    _member_ids: [...new Set(memberIds)],
+  });
   if (error) throw error;
-
-  const uniqueIds = [...new Set([currentUserId, ...memberIds])];
-  const { error: memberError } = await db.from("conversation_members").insert(
-    uniqueIds.map((id) => ({
-      conversation_id: conv.id,
-      user_id: id,
-      role: id === currentUserId ? "admin" : "member",
-    })),
-  );
-  if (memberError) throw memberError;
+  const { data: conv, error: readError } = await db.from("conversations").select("*").eq("id", data).single();
+  if (readError) throw readError;
   return conv as Conversation;
 }
 
 export async function addMember(conversationId: string, userId: string) {
-  const { error } = await db.from("conversation_members").insert({
-    conversation_id: conversationId,
-    user_id: userId,
-    role: "member",
-  });
-  if (error && !String(error.message).toLowerCase().includes("duplicate")) throw error;
+  const { error } = await db.rpc("add_group_member", { p_conversation_id: conversationId, p_user_id: userId });
+  if (error) throw error;
 }
 
 export async function removeMember(conversationId: string, userId: string) {
