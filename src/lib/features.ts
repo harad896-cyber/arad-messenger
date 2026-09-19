@@ -1,3 +1,4 @@
+export type { Profile } from "@/lib/messenger";
 import { supabase } from "@/integrations/supabase/client";
 
 const db = supabase as any;
