@@ -188,3 +188,9 @@
     animation-duration: 0.01ms !important;
   }
 }
+@layer components {
+  .icon-btn { @apply grid size-10 shrink-0 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50; }
+  .icon-btn-sm { @apply grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground; }
+  .field { @apply mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20; }
+  .label { @apply mt-3 block text-xs font-medium text-muted-foreground; }
+}
