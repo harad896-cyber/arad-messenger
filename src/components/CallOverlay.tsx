@@ -121,7 +121,7 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
     try {
       setStatus("در حال اتصال...");
       if (!session) throw new Error("جلسه تماس پیدا نشد");
-      const { data: currentSession } = await supabase.from("call_sessions").select("*").eq("id", session.id).single();
+      const { data: currentSession } = await (supabase as any).from("call_sessions").select("*").eq("id", session.id).single();
       if (currentSession) setSession(currentSession);
       await ensurePeer(false);
       const offerText = currentSession?.offer_sdp;
