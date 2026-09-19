@@ -40,6 +40,7 @@ function Messenger() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [conversations, setConversations] = useState<Conv[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [directPeerByConversation, setDirectPeerByConversation] = useState<Record<string, string>>({});
   const [lastMessages, setLastMessages] = useState<Record<string, Msg | undefined>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -68,9 +69,10 @@ function Messenger() {
   const activeTitle = useMemo(() => {
     if (!active) return "";
     if (active.type !== "direct") return active.title ?? "گروه";
-    const members = Object.values(profiles).filter((p) => p.id !== session?.id);
-    return members[0]?.display_name ?? members[0]?.username ?? "گفتگو";
-  }, [active, profiles, session?.id]);
+    const peer = directPeerByConversation[active.id];
+    const p = peer ? profiles[peer] : undefined;
+    return p?.display_name ?? p?.username ?? "گفتگوی خصوصی";
+  }, [active, directPeerByConversation, profiles]);
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +97,16 @@ function Messenger() {
         const convs = await loadConversations(session.id);
         if (cancelled) return;
         setConversations(convs);
-        const memberIds = [...new Set((await Promise.all(convs.map((c) => loadMembers(c.id)))).flat().map((m) => m.user_id))];
+        const memberRows = await Promise.all(convs.map((c) => loadMembers(c.id)));
+        const directPeers: Record<string, string> = {};
+        memberRows.forEach((rows: any[], i) => {
+          if (convs[i]?.type === "direct") {
+            const peer = rows.find((m) => m.user_id !== session.id);
+            if (peer) directPeers[convs[i].id] = peer.user_id;
+          }
+        });
+        setDirectPeerByConversation(directPeers);
+        const memberIds = [...new Set(memberRows.flat().map((m: any) => m.user_id))];
         const ps = await loadProfiles(memberIds);
         const map: Record<string, Profile> = {};
         ps.forEach((x) => { map[x.id] = x; });
@@ -366,7 +377,7 @@ function Messenger() {
 
       {showMembers && active && <MembersPanel conversation={active} currentUserId={session.id} profiles={profiles} close={()=>setShowMembers(false)} onAdded={async()=>{setConversations(await loadConversations(session.id));}} search={memberSearch} setSearch={setMemberSearch} notify={showNotice} />}
       {showNew && <NewConversationPanel currentUserId={session.id} close={()=>setShowNew(false)} groupName={newGroupName} setGroupName={setNewGroupName} selected={newGroupMembers} setSelected={setNewGroupMembers} onGroup={createNewGroup} onDirect={startDirect} />}
-      {call && <CallOverlay userId={session.id} profile={profile} conversation={call.conversation ?? active} type={call.type} incoming={call.incoming} incomingSession={call.session} onClose={()=>setCall(null)} />}
+      {call && <CallOverlay userId={session.id} profile={profile} conversation={call.conversation ?? active} type={call.type ?? call.session?.call_type ?? "voice"} incoming={call.incoming} incomingSession={call.session} onClose={()=>setCall(null)} />}
       {notice && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-foreground px-4 py-2 text-sm text-background shadow-xl">{notice}</div>}
     </div>
   );
