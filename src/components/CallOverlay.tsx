@@ -120,8 +120,20 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
   async function accept() {
     try {
       setStatus("در حال اتصال...");
+      if (!session) throw new Error("جلسه تماس پیدا نشد");
+      const { data: currentSession } = await supabase.from("call_sessions").select("*").eq("id", session.id).single();
+      if (currentSession) setSession(currentSession);
       await ensurePeer(false);
-      if (session) await updateCall(session.id, { status: "accepted", accepted_at: new Date().toISOString() });
+      const offerText = currentSession?.offer_sdp;
+      if (offerText) {
+        const offer = JSON.parse(offerText);
+        await pc.current!.setRemoteDescription(new RTCSessionDescription(offer));
+        for (const c of pendingCandidates.current.splice(0)) await pc.current!.addIceCandidate(c);
+        const answer = await pc.current!.createAnswer();
+        await pc.current!.setLocalDescription(answer);
+        await updateCall(session.id, { answer_sdp: JSON.stringify(answer), status: "accepted", accepted_at: new Date().toISOString() });
+        await sendCallSignal(session.id, userId, "answer", { sdp: answer });
+      }
     } catch (e) { setError(e instanceof Error ? e.message : "پذیرش تماس ناموفق بود"); }
   }
 
