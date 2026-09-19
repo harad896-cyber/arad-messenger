@@ -34,7 +34,7 @@ export async function addGroupMember(conversationId: string, userId: string) {
   return rpc("add_group_member", { p_conversation_id: conversationId, p_user_id: userId });
 }
 export async function removeGroupMember(conversationId: string, userId: string) {
-  return rpc("remove_group_member", { p_conversationid: conversationId, p_user_id: userId });
+  return rpc("remove_group_member", { p_conversation_id: conversationId, p_user_id: userId });
 }
 export async function setMemberRole(conversationId: string, userId: string, role: string) {
   return rpc("set_group_member_role", { p_conversation_id: conversationId, p_user_id: userId, p_role: role });
