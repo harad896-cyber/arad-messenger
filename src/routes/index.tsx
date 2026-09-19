@@ -313,7 +313,7 @@ function Messenger() {
   if (!session) return <AuthScreen mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} username={authUsername} setUsername={setAuthUsername} error={authError} busy={busy} onSubmit={submitAuth} />;
 
   const visibleConversations = conversations.filter((c) => {
-    const title = c.type === "direct" ? Object.values(profiles).find((p) => p.id !== session.id)?.display_name ?? "" : c.title ?? "";
+    const title = c.type === "direct" ? (directPeerByConversation[c.id] ? profiles[directPeerByConversation[c.id]]?.display_name : undefined) ?? "گفتگوی خصوصی" : c.title ?? "";
     return !search.trim() || title.toLowerCase().includes(search.toLowerCase());
   });
 
