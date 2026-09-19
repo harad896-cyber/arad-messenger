@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  Archive, Check, CheckCheck, LogOut, Menu, MessageCircle, Mic, MoreVertical,
+  Archive, Bookmark as BookmarkIcon, Check, CheckCheck, LogOut, Menu, MessageCircle, Mic, MoreVertical,
   Paperclip, Pause, Phone, Play, Plus, Search, Send, Settings, Smile,
   Square, Trash2, UserMinus, UserPlus, Users, Video, X, Loader2, Pencil,
 } from "lucide-react";
@@ -12,6 +12,8 @@ import {
   sendMessage, setPresence, supabase, toggleReaction,
 } from "@/lib/messenger";
 import { CallOverlay } from "@/components/CallOverlay";
+import { AdvancedPanel } from "@/components/AdvancedPanel";
+import { getUnreadCounts, markConversationRead, deleteForMe, saveMessage } from "@/lib/features";
 
 type SessionUser = { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null };
 type Profile = Awaited<ReturnType<typeof ensureProfile>>;
@@ -52,6 +54,8 @@ function Messenger() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [showMembers, setShowMembers] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [unread, setUnread] = useState<Record<string, number>>({});
   const [memberSearch, setMemberSearch] = useState("");
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupMembers, setNewGroupMembers] = useState<Profile[]>([]);
@@ -97,6 +101,12 @@ function Messenger() {
         const convs = await loadConversations(session.id);
         if (cancelled) return;
         setConversations(convs);
+        try {
+          const counts = await getUnreadCounts();
+          const um: Record<string, number> = {};
+          (counts ?? []).forEach((x: any) => { um[x.conversation_id] = Number(x.unread ?? 0); });
+          setUnread(um);
+        } catch {}
         const memberRows = await Promise.all(convs.map((c) => loadMembers(c.id)));
         const directPeers: Record<string, string> = {};
         memberRows.forEach((rows: any[], i) => {
@@ -131,6 +141,8 @@ function Messenger() {
     if (!activeId || !session) return;
     let cancelled = false;
     loadMessages(activeId).then(async (rows) => {
+      void markConversationRead(activeId).catch(()=>{});
+      setUnread((u) => ({...u, [activeId]: 0}));
       if (cancelled) return;
       setMessages(rows);
       const atts = await getMessageAttachments(rows.map((m) => m.id));
@@ -315,6 +327,7 @@ function Messenger() {
             <div className="truncate text-xs text-muted-foreground">@{profile?.username ?? "user"}</div>
           </div>
           <button className="icon-btn" title="گفتگوی جدید" onClick={() => setShowNew(true)}><Plus /></button>
+          <button className="icon-btn" title="امکانات بیشتر" onClick={() => setShowAdvanced(true)}><Settings /></button>
           <button className="icon-btn" title="خروج" onClick={signOut}><LogOut /></button>
         </div>
         <div className="p-3">
@@ -332,7 +345,7 @@ function Messenger() {
             return <button key={c.id} onClick={() => setActiveId(c.id)} className={`flex w-full items-center gap-3 p-3 text-right hover:bg-muted ${activeId === c.id ? "bg-muted" : ""}`}>
               <Avatar name={title} url={c.avatar_url} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2"><span className="truncate font-medium">{title}</span><span className="text-[10px] text-muted-foreground">{last ? new Date(last.created_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"}) : ""}</span></div>
+                <div className="flex items-center justify-between gap-2"><span className="truncate font-medium">{title}</span>{unread[c.id] ? <span className="min-w-5 rounded-full bg-primary px-1.5 text-center text-[10px] text-primary-foreground">{unread[c.id]}</span> : null}<span className="text-[10px] text-muted-foreground">{last ? new Date(last.created_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"}) : ""}</span></div>
                 <div className="truncate text-xs text-muted-foreground">{last?.body ?? (last?.message_type === "audio" ? "پیام صوتی" : "فایل") ?? "گفتگوی جدید"}</div>
               </div>
             </button>;
@@ -356,7 +369,7 @@ function Messenger() {
 
           <div className="chat-grid min-h-0 flex-1 overflow-y-auto px-3 py-5">
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
-              {messages.map((m) => <MessageBubble key={m.id} message={m} own={m.sender_id === session.id} profile={profiles[m.sender_id]} attachment={attachments[m.id]?.[0]} onReply={() => setReplyTo(m)} onEdit={() => {setEditing(m);setComposer(m.body ?? "");}} onDelete={async()=>{await deleteMessage(m.id);setMessages(await loadMessages(active.id));}} onReact={async()=>{await toggleReaction(m.id,session.id,"❤️");}} />)}
+              {messages.map((m) => <MessageBubble key={m.id} message={m} own={m.sender_id === session.id} profile={profiles[m.sender_id]} attachment={attachments[m.id]?.[0]} onReply={() => setReplyTo(m)} onEdit={() => {setEditing(m);setComposer(m.body ?? "");}} onDelete={async()=>{await deleteMessage(m.id);setMessages(await loadMessages(active.id));}} onDeleteForMe={async()=>{await deleteForMe(m.id);setMessages(await loadMessages(active.id));}} onSave={async()=>{await saveMessage(session.id,m.id,{body:m.body,message_type:m.message_type});showNotice("پیام ذخیره شد.");}} onReact={async()=>{await toggleReaction(m.id,session.id,"❤️");}} />)}
               {!messages.length && <div className="m-auto rounded-2xl bg-card/80 px-5 py-3 text-sm text-muted-foreground">اولین پیام را بفرست.</div>}
             </div>
           </div>
@@ -394,7 +407,7 @@ function AuthScreen({mode,setMode,email,setEmail,password,setPassword,name,setNa
 
 function EmptyState({onNew}:{onNew:()=>void}) { return <div dir="rtl" className="grid h-full place-items-center"><div className="text-center"><div className="mx-auto grid size-20 place-items-center rounded-3xl bg-primary/10 text-primary"><MessageCircle className="size-10"/></div><h2 className="mt-4 text-xl font-bold">آراد مسنجر</h2><p className="mt-1 text-sm text-muted-foreground">یک گفتگو را انتخاب کن یا گفتگوی جدید بساز.</p><button onClick={onNew} className="mt-5 rounded-xl bg-primary px-5 py-2.5 font-bold text-primary-foreground">گفتگوی جدید</button></div></div>; }
 
-function MessageBubble({message,own,profile,attachment,onReply,onEdit,onDelete,onReact}:{message:Msg;own:boolean;profile:Profile|undefined;attachment:any;onReply:()=>void;onEdit:()=>void;onDelete:()=>Promise<void>;onReact:()=>Promise<void>}) {
+function MessageBubble({message,own,profile,attachment,onReply,onEdit,onDelete,onDeleteForMe,onSave,onReact}:{message:Msg;own:boolean;profile:Profile|undefined;attachment:any;onReply:()=>void;onEdit:()=>void;onDelete:()=>Promise<void>;onDeleteForMe:()=>Promise<void>;onSave:()=>Promise<void>;onReact:()=>Promise<void>}) {
   const [url,setUrl]=useState("");
   useEffect(()=>{if(attachment?.storage_path)getAttachmentUrl(attachment.storage_path).then(setUrl).catch(()=>{});},[attachment?.storage_path]);
   const isAudio=message.message_type==="audio";
@@ -403,7 +416,7 @@ function MessageBubble({message,own,profile,attachment,onReply,onEdit,onDelete,o
     {attachment&&url&&(attachment.mime_type?.startsWith("image/")?<img src={url} alt="" className="mb-2 max-h-80 max-w-full rounded-xl object-contain"/>:isAudio?<audio src={url} controls preload="metadata" className="max-w-full"/>:<a href={url} target="_blank" rel="noreferrer" className="mb-1 block underline">{attachment.file_name??"فایل"}</a>)}
     {message.body&&<div className="whitespace-pre-wrap break-words text-sm">{message.body}</div>}
     <div className="mt-1 flex items-center justify-end gap-1 text-[10px] opacity-60"><span>{new Date(message.created_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"})}</span>{own&&<CheckCheck className="size-3"/>}</div>
-    <div className="absolute -top-9 right-0 hidden items-center gap-1 rounded-xl border border-border bg-popover p-1 shadow-lg group-hover:flex"><button className="icon-btn-sm" onClick={onReply}><MessageCircle/></button>{own&&<><button className="icon-btn-sm" onClick={onEdit}><Pencil/></button><button className="icon-btn-sm" onClick={()=>void onDelete()}><Trash2/></button></>}<button className="icon-btn-sm" onClick={()=>void onReact()}><Smile/></button></div>
+    <div className="absolute -top-9 right-0 hidden items-center gap-1 rounded-xl border border-border bg-popover p-1 shadow-lg group-hover:flex"><button className="icon-btn-sm" onClick={onReply}><MessageCircle/></button>{own&&<><button className="icon-btn-sm" onClick={onEdit}><Pencil/></button><button className="icon-btn-sm" onClick={()=>void onDelete()}><Trash2/></button></>}<button className="icon-btn-sm" onClick={()=>void onReact()}><Smile/></button><button className="icon-btn-sm" title="ذخیره" onClick={()=>void onSave()}><BookmarkIcon/></button>{!own&&<button className="icon-btn-sm" title="حذف برای من" onClick={()=>void onDeleteForMe()}><Trash2/></button>}</div>
   </div></div>;
 }
 
