@@ -223,9 +223,9 @@ export async function toggleReaction(messageId: string, userId: string, reaction
   }
 }
 
-export async function uploadAttachment(userId: string, file: File, folder = "files") {
+export async function uploadAttachment(conversationId: string, file: File, folder = "files") {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${userId}/${folder}/${crypto.randomUUID()}-${safeName}`;
+  const path = `${conversationId}/${folder}/${crypto.randomUUID()}-${safeName}`;
   const { error } = await supabase.storage.from("chat-media").upload(path, file, {
     contentType: file.type || "application/octet-stream",
     cacheControl: "3600",
@@ -236,7 +236,7 @@ export async function uploadAttachment(userId: string, file: File, folder = "fil
 }
 
 export async function createAttachmentMessage(conversationId: string, senderId: string, file: File, folder = "files", durationMs?: number) {
-  const uploaded = await uploadAttachment(senderId, file, folder);
+  const uploaded = await uploadAttachment(conversationId, file, folder);
   const messageType = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : file.type.startsWith("audio/") ? "audio" : "file";
   const message = await sendMessage(conversationId, senderId, uploaded.name, messageType);
   const { error } = await db.from("message_attachments").insert({
