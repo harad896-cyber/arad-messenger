@@ -1,0 +1,50 @@
+name: Build Arad Messenger APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web application
+        run: npm run build
+
+      - name: Package web application as Android APK
+        uses: cemcoe/web-to-apk-action@v1
+        with:
+          app_name: 'Arad Messenger'
+          app_id: 'com.arad.messenger'
+          build_command: 'npm run build'
+          web_dir: '.output/public'
+
+      - name: Upload generated APK files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arad-messenger-apk
+          path: |
+            **/*.apk
+            **/*.aab
+          if-no-files-found: warn
