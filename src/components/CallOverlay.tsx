@@ -81,19 +81,15 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
       if (s === "disconnected") setStatus("اتصال ناپایدار...");
     };
     pc.current = connection;
-    try {
-      const local = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
-      stream.current = local;
-      local.getTracks().forEach((t) => connection.addTrack(t, local));
-      if (initiator) {
-        const offer = await connection.createOffer();
-        await connection.setLocalDescription(offer);
-        if (!session) throw new Error("جلسه تماس ساخته نشده");
-        await updateCall(session.id, { offer_sdp: JSON.stringify(offer) });
-        await sendCallSignal(session.id, userId, "offer", { sdp: offer });
-      }
-    } catch (e) {
-      throw e;
+    const local = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
+    stream.current = local;
+    local.getTracks().forEach((t) => connection.addTrack(t, local));
+    if (initiator) {
+      const offer = await connection.createOffer();
+      await connection.setLocalDescription(offer);
+      if (!session) throw new Error("جلسه تماس ساخته نشده");
+      await updateCall(session.id, { offer_sdp: JSON.stringify(offer) });
+      await sendCallSignal(session.id, userId, "offer", { sdp: offer });
     }
     return connection;
   }
@@ -113,7 +109,9 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
           for (const candidate of pendingCandidates.current.splice(0)) await pc.current.addIceCandidate(candidate);
           setStatus("متصل");
         }
-      } catch {}
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn("Call session polling failed", e);
+      }
     }, 1200);
     return () => window.clearInterval(timer);
   }, [incoming, session?.id]);
