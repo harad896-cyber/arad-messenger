@@ -19,7 +19,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -52,8 +51,7 @@ jobs:
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Initialize Capacitor
-        run: |
-          npx cap init "Arad Messenger" "com.arad.messenger" --web-dir "$WEB_DIR" --npm-client npm
+        run: npx cap init "Arad Messenger" "com.arad.messenger" --web-dir "$WEB_DIR" --npm-client npm
 
       - name: Add Android platform
         run: npx cap add android
