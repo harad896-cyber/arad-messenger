@@ -106,7 +106,9 @@ function Messenger() {
           const um: Record<string, number> = {};
           (counts ?? []).forEach((x: any) => { um[x.conversation_id] = Number(x.unread ?? 0); });
           setUnread(um);
-        } catch {}
+        } catch (e) {
+          if (import.meta.env.DEV) console.warn("Unread count refresh failed", e);
+        }
         const memberRows = await Promise.all(convs.map((c) => loadMembers(c.id)));
         const directPeers: Record<string, string> = {};
         memberRows.forEach((rows: any[], i) => {
