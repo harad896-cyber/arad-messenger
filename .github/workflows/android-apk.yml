@@ -51,7 +51,7 @@ jobs:
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Initialize Capacitor
-        run: npx cap init "Arad Messenger" "com.arad.messenger" --web-dir "$WEB_DIR" --npm-client npm
+        run: npx cap init "Arad Messenger" "com.arad.messenger" --web-dir "$WEB_DIR"
 
       - name: Add Android platform
         run: npx cap add android
