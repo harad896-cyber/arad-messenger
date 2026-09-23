@@ -15,7 +15,7 @@ jobs:
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
@@ -26,26 +26,52 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Install dependencies
         run: npm install
 
       - name: Build web application
         run: npm run build
 
-      - name: Package web application as Android APK
-        uses: cemcoe/web-to-apk-action@v1
-        with:
-          app_name: 'Arad Messenger'
-          app_id: 'com.arad.messenger'
-          build_command: 'npm run build'
-          web_dir: '.output/public'
+      - name: Detect web output
+        id: web-output
+        shell: bash
+        run: |
+          if [ -d ".output/public" ]; then
+            echo "web_dir=.output/public" >> "$GITHUB_OUTPUT"
+          elif [ -d "dist" ]; then
+            echo "web_dir=dist" >> "$GITHUB_OUTPUT"
+          elif [ -d "build" ]; then
+            echo "web_dir=build" >> "$GITHUB_OUTPUT"
+          else
+            echo "No web output directory found"
+            exit 1
+          fi
 
-      - name: Upload generated APK files
-        if: always()
+      - name: Install Capacitor
+        run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Initialize Capacitor
+        run: npx cap init "Arad Messenger" "com.arad.messenger" --web-dir "${{ steps.web-output.outputs.web_dir }}"
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync web app to Android
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: arad-messenger-apk
-          path: |
-            **/*.apk
-            **/*.aab
-          if-no-files-found: warn
+          name: arad-messenger-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
