@@ -38,26 +38,36 @@ jobs:
       - name: Build web application
         run: npm run build
 
-      - name: Detect web output
-        id: web-output
+      - name: Prepare Capacitor web entry
         shell: bash
         run: |
-          if [ -d ".output/public" ]; then
-            echo "web_dir=.output/public" >> "$GITHUB_OUTPUT"
-          elif [ -d "dist" ]; then
-            echo "web_dir=dist" >> "$GITHUB_OUTPUT"
-          elif [ -d "build" ]; then
-            echo "web_dir=build" >> "$GITHUB_OUTPUT"
-          else
-            echo "No web output directory found"
-            exit 1
+          set -euo pipefail
+          WEB_DIR=".output/public"
+          test -d "$WEB_DIR"
+          CSS_FILE="$(find "$WEB_DIR/assets" -maxdepth 1 -type f -name '*.css' | head -1 || true)"
+          JS_FILE="$(find "$WEB_DIR/assets" -maxdepth 1 -type f -name 'index-*.js' | head -1 || true)"
+          if [ -z "$JS_FILE" ]; then
+            JS_FILE="$(find "$WEB_DIR/assets" -maxdepth 1 -type f -name '*.js' | head -1 || true)"
           fi
+          test -n "$JS_FILE"
+          JS_NAME="${JS_FILE#"$WEB_DIR"/}"
+          CSS_NAME=""
+          if [ -n "$CSS_FILE" ]; then CSS_NAME="${CSS_FILE#"$WEB_DIR"/}"; fi
+          {
+            echo '<!doctype html>'
+            echo '<html lang="fa" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>آراد مسنجر</title>'
+            if [ -n "$CSS_NAME" ]; then echo "<link rel=\"stylesheet\" href=\"/$CSS_NAME\">"; fi
+            echo '</head><body><div id="root"></div>'
+            echo "<script type=\"module\" src=\"/$JS_NAME\"></script>"
+            echo '</body></html>'
+          } > "$WEB_DIR/index.html"
+          echo "Prepared $WEB_DIR/index.html using $JS_NAME"
 
       - name: Install Capacitor
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Initialize Capacitor
-        run: npx cap init "Arad Messenger" "com.arad.messenger" --web-dir "${{ steps.web-output.outputs.web_dir }}"
+        run: npx cap init "Arad Messenger" "com.arad.messenger" --web-dir ".output/public"
 
       - name: Add Android platform
         run: npx cap add android
@@ -65,9 +75,15 @@ jobs:
       - name: Sync web app to Android
         run: npx cap sync android
 
+      - name: Verify Android web assets
+        run: test -f android/app/src/main/assets/public/index.html
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
+
+      - name: Verify APK
+        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
