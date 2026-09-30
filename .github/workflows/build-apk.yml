@@ -43,13 +43,6 @@ jobs:
           set -euo pipefail
           npm run build
 
-      - name: Prepare Capacitor web entry
-        run: |
-          set -euo pipefail
-          test -s .output/public/index.html
-          node -e "const fs=require('fs'); const p='.output/public/index.html'; let s=fs.readFileSync(p,'utf8'); s=s.replaceAll('src=\"/assets/','src=\"./assets/').replaceAll('href=\"/assets/','href=\"./assets/'); fs.writeFileSync(p,s)"
-          test -s .output/public/index.html
-
       - name: Install Capacitor
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
 
