@@ -22,6 +22,7 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
   const pc = useRef<RTCPeerConnection | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const remote = useRef<HTMLVideoElement | null>(null);
+  const remoteAudio = useRef<HTMLAudioElement | null>(null);
   const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
 
   useEffect(() => {
@@ -72,7 +73,9 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
       if (e.candidate && session) void sendCallSignal(session.id, userId, "ice", e.candidate.toJSON());
     };
     connection.ontrack = (e) => {
-      if (remote.current) remote.current.srcObject = e.streams[0];
+      const stream = e.streams[0];
+      if (remote.current) remote.current.srcObject = stream;
+      if (remoteAudio.current) remoteAudio.current.srcObject = stream;
     };
     connection.onconnectionstatechange = () => {
       const s = connection.connectionState;
@@ -191,6 +194,7 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
   return <div dir="rtl" className="fixed inset-0 z-[60] grid place-items-center bg-black/90 p-4">
     <div className="relative flex h-full max-h-[760px] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-zinc-950 text-white shadow-2xl">
       {type === "video" && <video ref={remote} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />}
+      {type === "voice" && <audio ref={remoteAudio} autoPlay playsInline className="hidden" />}
       <div className="relative flex items-center gap-3 p-5"><div className="grid size-12 place-items-center rounded-full bg-primary text-xl font-bold">{String(conversation?.title ?? "آ").slice(0,1)}</div><div><div className="font-bold">{conversation?.title ?? "تماس"}</div><div className="text-xs opacity-70">{status}</div></div></div>
       {type === "voice" && <div className="relative flex flex-1 flex-col items-center justify-center"><div className="grid size-36 place-items-center rounded-full bg-primary/20 ring-1 ring-primary/30"><Phone className="size-12 text-primary" /></div><p className="mt-6 text-sm opacity-70">{connected ? "تماس برقرار است" : status}</p></div>}
       {type === "video" && !connected && <div className="relative flex flex-1 items-center justify-center"><p className="rounded-xl bg-black/50 px-4 py-2 text-sm">{status}</p></div>}
