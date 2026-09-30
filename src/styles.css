@@ -194,3 +194,77 @@
   .field { @apply mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20; }
   .label { @apply mt-3 block text-xs font-medium text-muted-foreground; }
 }
+
+
+/* Arad Messenger visual system — light Persian messenger reference */
+:root {
+  --radius: 1rem;
+  --background: oklch(0.975 0.006 260);
+  --foreground: oklch(0.20 0.025 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.20 0.025 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.20 0.025 260);
+  --primary: oklch(0.56 0.16 265);
+  --primary-foreground: oklch(0.99 0.003 260);
+  --secondary: oklch(0.95 0.012 260);
+  --secondary-foreground: oklch(0.25 0.025 260);
+  --muted: oklch(0.945 0.012 260);
+  --muted-foreground: oklch(0.52 0.025 260);
+  --accent: oklch(0.93 0.025 265);
+  --accent-foreground: oklch(0.27 0.05 265);
+  --destructive: oklch(0.60 0.20 25);
+  --destructive-foreground: oklch(0.99 0.003 260);
+  --border: oklch(0.90 0.012 260);
+  --input: oklch(0.91 0.012 260);
+  --ring: oklch(0.56 0.16 265);
+  --sidebar: oklch(0.99 0.003 260);
+  --sidebar-foreground: oklch(0.20 0.025 260);
+  --sidebar-primary: oklch(0.56 0.16 265);
+  --sidebar-primary-foreground: oklch(0.99 0.003 260);
+  --sidebar-accent: oklch(0.94 0.018 265);
+  --sidebar-accent-foreground: oklch(0.25 0.04 265);
+  --sidebar-border: oklch(0.90 0.012 260);
+  --sidebar-ring: oklch(0.56 0.16 265);
+  --chat-surface: oklch(0.985 0.004 260);
+  --chat-raised: oklch(1 0 0);
+  --chat-own: oklch(0.56 0.16 265);
+  --chat-own-foreground: oklch(0.99 0.003 260);
+  --online: oklch(0.67 0.16 150);
+  --read: oklch(0.60 0.14 245);
+}
+
+body {
+  background: var(--background);
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+}
+
+@layer components {
+  .icon-btn {
+    @apply grid size-10 shrink-0 place-items-center rounded-2xl text-muted-foreground transition-all duration-150 hover:bg-accent hover:text-primary active:scale-95 disabled:opacity-50;
+  }
+  .icon-btn-sm {
+    @apply grid size-8 place-items-center rounded-xl text-muted-foreground transition hover:bg-accent hover:text-primary;
+  }
+  .field {
+    @apply mt-2 h-11 w-full rounded-2xl border border-border bg-card px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15;
+  }
+  .label {
+    @apply mt-3 block text-xs font-medium text-muted-foreground;
+  }
+}
+
+.chat-grid {
+  background-color: var(--chat-surface);
+  background-image: radial-gradient(oklch(0.65 0.02 260 / 8%) 0.7px, transparent 0.7px);
+  background-size: 24px 24px;
+}
+
+@media (max-width: 767px) {
+  .chat-grid {
+    background-image: none;
+  }
+}
