@@ -48,25 +48,22 @@ jobs:
         run: |
           set -euo pipefail
           WEB_DIR=".output/public"
+          INDEX="$WEB_DIR/index.html"
           test -d "$WEB_DIR"
-          CSS_FILE="$(find "$WEB_DIR/assets" -maxdepth 1 -type f -name '*.css' | head -1 || true)"
-          JS_FILE="$(find "$WEB_DIR/assets" -maxdepth 1 -type f -name 'index-*.js' | head -1 || true)"
-          if [ -z "$JS_FILE" ]; then
-            JS_FILE="$(find "$WEB_DIR/assets" -maxdepth 1 -type f -name '*.js' | head -1 || true)"
-          fi
-          test -n "$JS_FILE"
-          JS_NAME="${JS_FILE#"$WEB_DIR"/}"
-          CSS_NAME=""
-          if [ -n "$CSS_FILE" ]; then CSS_NAME="${CSS_FILE#"$WEB_DIR"/}"; fi
-          {
-            echo '<!doctype html>'
-            echo '<html lang="fa" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>آراد مسنجر</title>'
-            if [ -n "$CSS_NAME" ]; then echo "<link rel=\"stylesheet\" href=\"./$CSS_NAME\">"; fi
-            echo '</head><body><div id="root"></div>'
-            echo "<script type=\"module\" src=\"./$JS_NAME\"></script>"
-            echo '</body></html>'
-          } > "$WEB_DIR/index.html"
-          echo "Prepared $WEB_DIR/index.html using $JS_NAME"
+          test -s "$INDEX"
+
+          # Keep TanStack Start's generated HTML/SSR bootstrap intact.
+          # Only rewrite root-relative asset URLs for Capacitor's local WebView.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path(".output/public/index.html")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace('src="/assets/', 'src="./assets/')
+          s = s.replace('href="/assets/', 'href="./assets/')
+          p.write_text(s, encoding="utf-8")
+          PY
+
+          echo "Prepared $INDEX without replacing TanStack Start bootstrap"
 
       - name: Install Capacitor
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
