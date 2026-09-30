@@ -67,6 +67,7 @@ function Messenger() {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const mediaStream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const recordingSecondsRef = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
@@ -185,7 +186,11 @@ function Messenger() {
 
   useEffect(() => {
     if (!recording) return;
-    const t = window.setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    const t = window.setInterval(() => setRecordingSeconds((s) => {
+      const next = s + 1;
+      recordingSecondsRef.current = next;
+      return next;
+    }), 1000);
     return () => window.clearInterval(t);
   }, [recording]);
 
@@ -252,17 +257,19 @@ function Messenger() {
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         mediaStream.current = null;
-        if (!chunks.current.length || recordingSeconds < 1) return;
+        const duration = recordingSecondsRef.current;
+        if (!chunks.current.length || duration < 1) return;
         const blob = new Blob(chunks.current, { type: recorder.mimeType || "audio/webm" });
         const ext = recorder.mimeType.includes("mp4") ? "m4a" : "webm";
         const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: blob.type });
         try {
-          await createAttachmentMessage(activeId, session.id, file, "voice", recordingSeconds * 1000);
+          await createAttachmentMessage(activeId, session.id, file, "voice", duration * 1000);
           setMessages(await loadMessages(activeId));
         } catch (e) { showNotice(e instanceof Error ? e.message : "آپلود ویس ناموفق بود"); }
       };
       recorder.start(250);
       mediaRecorder.current = recorder;
+      recordingSecondsRef.current = 0;
       setRecordingSeconds(0);
       setRecording(true);
     } catch (e) {
@@ -276,6 +283,7 @@ function Messenger() {
     if (cancel) chunks.current = [];
     r.stop();
     mediaRecorder.current = null;
+    recordingSecondsRef.current = 0;
     setRecording(false);
   }
 
@@ -341,7 +349,7 @@ function Messenger() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {visibleConversations.map((c) => {
             const title = c.type === "direct"
-              ? Object.values(profiles).find((p) => p.id !== session.id && conversations.some((cc) => cc.id === c.id))?.display_name ?? "گفتگوی خصوصی"
+              ? profiles[directPeerByConversation[c.id]]?.display_name ?? profiles[directPeerByConversation[c.id]]?.username ?? "گفتگوی خصوصی"
               : c.title ?? "گفتگو";
             const last = lastMessages[c.id];
             return <button key={c.id} onClick={() => setActiveId(c.id)} className={`flex w-full items-center gap-3 p-3 text-right hover:bg-muted ${activeId === c.id ? "bg-muted" : ""}`}>
@@ -413,10 +421,11 @@ function EmptyState({onNew}:{onNew:()=>void}) { return <div dir="rtl" className=
 function MessageBubble({message,own,profile,attachment,onReply,onEdit,onDelete,onDeleteForMe,onSave,onReact}:{message:Msg;own:boolean;profile:Profile|undefined;attachment:any;onReply:()=>void;onEdit:()=>void;onDelete:()=>Promise<void>;onDeleteForMe:()=>Promise<void>;onSave:()=>Promise<void>;onReact:()=>Promise<void>}) {
   const [url,setUrl]=useState("");
   useEffect(()=>{if(attachment?.storage_path)getAttachmentUrl(attachment.storage_path).then(setUrl).catch(()=>{});},[attachment?.storage_path]);
-  const isAudio=message.message_type==="audio";
+  const isAudio=message.message_type==="audio"||message.message_type==="voice";
+  const isVideo=message.message_type==="video";
   return <div className={`group flex ${own?"justify-start":"justify-end"}`}><div className={`relative max-w-[min(80%,620px)] rounded-2xl px-3 py-2 shadow-sm ${own?"bg-primary text-primary-foreground rounded-br-md":"bg-card border border-border rounded-bl-md"}`}>
     {!own&&<div className="mb-1 text-[11px] font-bold opacity-70">{profile?.display_name??"کاربر"}</div>}
-    {attachment&&url&&(attachment.mime_type?.startsWith("image/")?<img src={url} alt="" className="mb-2 max-h-80 max-w-full rounded-xl object-contain"/>:isAudio?<audio src={url} controls preload="metadata" className="max-w-full"/>:<a href={url} target="_blank" rel="noreferrer" className="mb-1 block underline">{attachment.file_name??"فایل"}</a>)}
+    {attachment&&url&&(attachment.mime_type?.startsWith("image/")?<img src={url} alt="" className="mb-2 max-h-80 max-w-full rounded-xl object-contain"/>:isAudio?<audio src={url} controls preload="metadata" className="w-full max-w-[320px]"/>:isVideo?<video src={url} controls playsInline preload="metadata" className="mb-2 max-h-80 max-w-full rounded-xl"/>:<a href={url} target="_blank" rel="noreferrer" className="mb-1 block underline">{attachment.file_name??"فایل"}</a>)}
     {message.body&&<div className="whitespace-pre-wrap break-words text-sm">{message.body}</div>}
     <div className="mt-1 flex items-center justify-end gap-1 text-[10px] opacity-60"><span>{new Date(message.created_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"})}</span>{own&&<CheckCheck className="size-3"/>}</div>
     <div className="absolute -top-9 right-0 hidden items-center gap-1 rounded-xl border border-border bg-popover p-1 shadow-lg group-hover:flex"><button className="icon-btn-sm" onClick={onReply}><MessageCircle/></button>{own&&<><button className="icon-btn-sm" onClick={onEdit}><Pencil/></button><button className="icon-btn-sm" onClick={()=>void onDelete()}><Trash2/></button></>}<button className="icon-btn-sm" onClick={()=>void onReact()}><Smile/></button><button className="icon-btn-sm" title="ذخیره" onClick={()=>void onSave()}><BookmarkIcon/></button>{!own&&<button className="icon-btn-sm" title="حذف برای من" onClick={()=>void onDeleteForMe()}><Trash2/></button>}</div>
@@ -430,7 +439,7 @@ function MembersPanel({conversation,currentUserId,profiles,close,onAdded,search,
   useEffect(()=>{loadMembers(conversation.id).then(setMembers).catch(()=>{});},[conversation.id]);
   useEffect(()=>{if(!search.trim())return void setResults([]);searchProfiles(search,currentUserId).then(setResults).catch(()=>setResults([]));},[search,currentUserId]);
   const add=async(p:Profile)=>{setLoading(true);try{await addGroupMember(conversation.id,p.id);setMembers(await loadMembers(conversation.id));setSearch("");await onAdded();notify("عضو اضافه شد.");}catch(e){notify(e instanceof Error?e.message:"افزودن عضو ناموفق بود");}finally{setLoading(false);}};
-  return <div className="fixed inset-y-0 left-0 z-40 w-full max-w-sm border-r border-border bg-card shadow-2xl"><div className="flex h-16 items-center gap-2 border-b border-border px-4"><button className="icon-btn" onClick={close}><X/></button><h3 className="font-bold">{conversation.type==="group"?"اعضای گروه":"اطلاعات گفتگو"}</h3></div><div className="p-4">{conversation.type==="group"&&<><div className="flex gap-2"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="نام کاربری برای افزودن..." className="field mt-0"/><button disabled={loading} className="icon-btn bg-primary text-primary-foreground"><UserPlus/></button></div>{results.map(p=><button key={p.id} onClick={()=>void add(p)} className="mt-2 flex w-full items-center gap-3 rounded-xl p-2 text-right hover:bg-muted"><Avatar name={p.display_name} url={p.avatar_url}/><div><div className="font-medium">{p.display_name}</div><div className="text-xs text-muted-foreground">@{p.username}</div></div></button>)}<div className="my-5 h-px bg-border"/></>}{members.map(m=>{const p=profiles[m.user_id];return <div key={m.user_id} className="flex items-center gap-3 py-2"><Avatar name={p?.display_name} url={p?.avatar_url} size="sm"/><div className="flex-1"><div className="text-sm">{p?.display_name??"کاربر"}</div><div className="text-xs text-muted-foreground">{m.role==="admin"?"مدیر":"عضو"}</div></div>{m.user_id!==currentUserId&&conversation.type==="group"&&<div className="flex gap-1"><button className="icon-btn-sm" title="تغییر نقش" onClick={()=>void setMemberRole(conversation.id,m.user_id,m.role==="admin"?"member":"admin").then(async()=>setMembers(await loadMembers(conversation.id))).catch(e=>notify(e instanceof Error?e.message:"تغییر نقش ناموفق بود"))}>↕</button><button className="icon-btn-sm" title="حذف عضو" onClick={()=>void removeGroupMember(conversation.id,m.user_id).then(async()=>setMembers(await loadMembers(conversation.id))).catch(e=>notify(e instanceof Error?e.message:"حذف عضو ناموفق بود"))}><UserMinus/></button></div>}</div>})}</div></div>;
+  return <div className="fixed inset-y-0 left-0 z-40 w-full max-w-sm border-r border-border bg-card shadow-2xl"><div className="flex h-16 items-center gap-2 border-b border-border px-4"><button className="icon-btn" onClick={close}><X/></button><h3 className="font-bold">{conversation.type==="group"?"اعضای گروه":"اطلاعات گفتگو"}</h3></div><div className="p-4">{conversation.type==="group"&&<><div className="flex gap-2"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="نام کاربری برای افزودن..." className="field mt-0"/><button disabled={loading} onClick={()=>{const p=results[0];if(p) void add(p)}} className="icon-btn bg-primary text-primary-foreground"><UserPlus/></button></div>{results.map(p=><button key={p.id} onClick={()=>void add(p)} className="mt-2 flex w-full items-center gap-3 rounded-xl p-2 text-right hover:bg-muted"><Avatar name={p.display_name} url={p.avatar_url}/><div><div className="font-medium">{p.display_name}</div><div className="text-xs text-muted-foreground">@{p.username}</div></div></button>)}<div className="my-5 h-px bg-border"/></>}{members.map(m=>{const p=profiles[m.user_id];return <div key={m.user_id} className="flex items-center gap-3 py-2"><Avatar name={p?.display_name} url={p?.avatar_url} size="sm"/><div className="flex-1"><div className="text-sm">{p?.display_name??"کاربر"}</div><div className="text-xs text-muted-foreground">{m.role==="admin"?"مدیر":"عضو"}</div></div>{m.user_id!==currentUserId&&conversation.type==="group"&&<div className="flex gap-1"><button className="icon-btn-sm" title="تغییر نقش" onClick={()=>void setMemberRole(conversation.id,m.user_id,m.role==="admin"?"member":"admin").then(async()=>setMembers(await loadMembers(conversation.id))).catch(e=>notify(e instanceof Error?e.message:"تغییر نقش ناموفق بود"))}>↕</button><button className="icon-btn-sm" title="حذف عضو" onClick={()=>void removeGroupMember(conversation.id,m.user_id).then(async()=>setMembers(await loadMembers(conversation.id))).catch(e=>notify(e instanceof Error?e.message:"حذف عضو ناموفق بود"))}><UserMinus/></button></div>}</div>})}</div></div>;
 }
 
 function NewConversationPanel({currentUserId,close,groupName,setGroupName,selected,setSelected,onGroup,onDirect}:{currentUserId:string;close:()=>void;groupName:string;setGroupName:(x:string)=>void;selected:Profile[];setSelected:(x:Profile[])=>void;onGroup:()=>Promise<void>;onDirect:(p:Profile)=>Promise<void>}) {
