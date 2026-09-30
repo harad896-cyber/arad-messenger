@@ -61,7 +61,7 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
     return () => { active = false; void supabase.removeChannel(channel); cleanup(); };
   }, [session?.id, userId]);
 
-  async function ensurePeer(initiator: boolean) {
+  async function ensurePeer(initiator: boolean, callSession: any = session) {
     if (pc.current) return pc.current;
     const connection = new RTCPeerConnection({
       iceServers: [
@@ -70,7 +70,7 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
       ],
     });
     connection.onicecandidate = (e) => {
-      if (e.candidate && session) void sendCallSignal(session.id, userId, "ice", e.candidate.toJSON());
+      if (e.candidate && callSession) void sendCallSignal(callSession.id, userId, "ice", e.candidate.toJSON());
     };
     connection.ontrack = (e) => {
       const stream = e.streams[0];
@@ -90,9 +90,9 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
     if (initiator) {
       const offer = await connection.createOffer();
       await connection.setLocalDescription(offer);
-      if (!session) throw new Error("جلسه تماس ساخته نشده");
-      await updateCall(session.id, { offer_sdp: JSON.stringify(offer) });
-      await sendCallSignal(session.id, userId, "offer", { sdp: offer });
+      if (!callSession) throw new Error("جلسه تماس ساخته نشده");
+      await updateCall(callSession.id, { offer_sdp: JSON.stringify(offer) });
+      await sendCallSignal(callSession.id, userId, "offer", { sdp: offer });
     }
     return connection;
   }
@@ -130,7 +130,7 @@ export function CallOverlay({ userId, profile, conversation, type = "voice", inc
         const created = await startCall(conversation.id, userId, callee, type);
         if (cancelled) return;
         setSession(created);
-        await ensurePeer(true);
+        await ensurePeer(true, created);
       } catch (e) {
         setError(e instanceof Error ? e.message : "شروع تماس ناموفق بود");
       }
