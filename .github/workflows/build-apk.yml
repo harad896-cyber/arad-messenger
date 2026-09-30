@@ -61,9 +61,9 @@ jobs:
           {
             echo '<!doctype html>'
             echo '<html lang="fa" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>آراد مسنجر</title>'
-            if [ -n "$CSS_NAME" ]; then echo "<link rel=\"stylesheet\" href=\"/$CSS_NAME\">"; fi
+            if [ -n "$CSS_NAME" ]; then echo "<link rel=\"stylesheet\" href=\"./$CSS_NAME\">"; fi
             echo '</head><body><div id="root"></div>'
-            echo "<script type=\"module\" src=\"/$JS_NAME\"></script>"
+            echo "<script type=\"module\" src=\"./$JS_NAME\"></script>"
             echo '</body></html>'
           } > "$WEB_DIR/index.html"
           echo "Prepared $WEB_DIR/index.html using $JS_NAME"
