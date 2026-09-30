@@ -44,26 +44,11 @@ jobs:
           npm run build
 
       - name: Prepare Capacitor web entry
-        shell: bash
         run: |
           set -euo pipefail
-          WEB_DIR=".output/public"
-          INDEX="$WEB_DIR/index.html"
-          test -d "$WEB_DIR"
-          test -s "$INDEX"
-
-          # Keep TanStack Start's generated HTML/SSR bootstrap intact.
-          # Only rewrite root-relative asset URLs for Capacitor's local WebView.
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path(".output/public/index.html")
-          s = p.read_text(encoding="utf-8")
-          s = s.replace('src="/assets/', 'src="./assets/')
-          s = s.replace('href="/assets/', 'href="./assets/')
-          p.write_text(s, encoding="utf-8")
-          PY
-
-          echo "Prepared $INDEX without replacing TanStack Start bootstrap"
+          test -s .output/public/index.html
+          node -e "const fs=require('fs'); const p='.output/public/index.html'; let s=fs.readFileSync(p,'utf8'); s=s.replaceAll('src=\"/assets/','src=\"./assets/').replaceAll('href=\"/assets/','href=\"./assets/'); fs.writeFileSync(p,s)"
+          test -s .output/public/index.html
 
       - name: Install Capacitor
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
