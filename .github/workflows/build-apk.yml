@@ -43,6 +43,32 @@ jobs:
           set -euo pipefail
           npm run build
 
+      # TanStack Start builds a server-rendered app and does not emit a root index.html.
+      # Capacitor requires one, so use a tiny native entry page that opens the hosted app.
+      - name: Create Android web entry point
+        env:
+          ARAD_MESSENGER_WEB_URL: ${{ secrets.ARAD_MESSENGER_WEB_URL || 'https://arad-messenger-8duh-3awk94jja-harad896-1221.vercel.app' }}
+        run: |
+          set -euo pipefail
+          test -d .output/public
+          cat > .output/public/index.html <<EOF
+          <!doctype html>
+          <html lang="fa" dir="rtl">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+              <meta name="theme-color" content="#101426">
+              <title>Arad Messenger</title>
+            </head>
+            <body style="margin:0;background:#101426;color:#fff;font-family:system-ui,sans-serif">
+              <p style="padding:24px;text-align:center">در حال باز کردن پیام‌رسان آراد…</p>
+              <script>location.replace(${JSON.stringify(process.env.ARAD_MESSENGER_WEB_URL)});</script>
+              <noscript>برای استفاده از پیام‌رسان، JavaScript را فعال کنید.</noscript>
+            </body>
+          </html>
+          EOF
+          test -s .output/public/index.html
+
       - name: Install Capacitor
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
 
