@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           test -d .output/public
-          cat > .output/public/index.html <<EOF
+          cat > .output/public/index.html <<'HTML'
           <!doctype html>
           <html lang="fa" dir="rtl">
             <head>
@@ -62,11 +62,12 @@ jobs:
             </head>
             <body style="margin:0;background:#101426;color:#fff;font-family:system-ui,sans-serif">
               <p style="padding:24px;text-align:center">در حال باز کردن پیام‌رسان آراد…</p>
-              <script>location.replace(${JSON.stringify(process.env.ARAD_MESSENGER_WEB_URL)});</script>
+              <script>location.replace(__ARAD_URL__);</script>
               <noscript>برای استفاده از پیام‌رسان، JavaScript را فعال کنید.</noscript>
             </body>
           </html>
-          EOF
+          HTML
+          node -e 'const fs=require("node:fs"); const p=".output/public/index.html"; fs.writeFileSync(p,fs.readFileSync(p,"utf8").replace("__ARAD_URL__",JSON.stringify(process.env.ARAD_MESSENGER_WEB_URL)))'
           test -s .output/public/index.html
 
       - name: Install Capacitor
