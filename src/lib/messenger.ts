@@ -84,6 +84,19 @@ export async function loadMessages(conversationId: string) {
   return (data ?? []) as MessageRow[];
 }
 
+export async function loadLatestMessage(conversationId: string) {
+  const { data, error } = await db
+    .from("messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? undefined) as MessageRow | undefined;
+}
+
 export async function loadProfiles(ids: string[]) {
   if (!ids.length) return [];
   const { data, error } = await db.from("profiles").select("*").in("id", ids);
