@@ -328,9 +328,9 @@ function Messenger() {
   });
 
   return (
-    <div dir="rtl" className="flex h-dvh min-w-0 overflow-hidden bg-background text-foreground">
-      <aside className={`flex w-full max-w-[360px] shrink-0 flex-col border-l border-border bg-card ${activeId ? "hidden md:flex" : "flex"}`}>
-        <div className="flex items-center gap-2 border-b border-border p-3">
+    <div dir="rtl" className="app-shell flex h-dvh min-w-0 overflow-hidden bg-background text-foreground">
+      <aside className={`chat-sidebar flex w-full max-w-[360px] shrink-0 flex-col border-l border-border bg-card ${activeId ? "hidden md:flex" : "flex"}`}>
+        <div className="sidebar-top flex items-center gap-2 border-b border-border p-3">
           <Avatar name={profile?.display_name} url={profile?.avatar_url} />
           <div className="min-w-0 flex-1">
             <div className="truncate font-bold">آراد مسنجر</div>
@@ -340,7 +340,7 @@ function Messenger() {
           <button className="icon-btn" title="امکانات بیشتر" onClick={() => setShowAdvanced(true)}><Settings /></button>
           <button className="icon-btn" title="خروج" onClick={signOut}><LogOut /></button>
         </div>
-        <div className="p-3">
+        <div className="sidebar-search p-3">
           <div className="flex items-center gap-2 rounded-xl bg-muted px-3">
             <Search className="size-4 text-muted-foreground" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی گفتگو..." className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none" />
@@ -352,7 +352,7 @@ function Messenger() {
               ? profiles[directPeerByConversation[c.id]]?.display_name ?? profiles[directPeerByConversation[c.id]]?.username ?? "گفتگوی خصوصی"
               : c.title ?? "گفتگو";
             const last = lastMessages[c.id];
-            return <button key={c.id} onClick={() => setActiveId(c.id)} className={`flex w-full items-center gap-3 p-3 text-right hover:bg-muted ${activeId === c.id ? "bg-muted" : ""}`}>
+            return <button key={c.id} onClick={() => setActiveId(c.id)} className={`conversation-item flex w-full items-center gap-3 p-3 text-right hover:bg-muted ${activeId === c.id ? "is-active bg-muted" : ""}`}>
               <Avatar name={title} url={c.avatar_url} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2"><span className="truncate font-medium">{title}</span>{unread[c.id] ? <span className="min-w-5 rounded-full bg-primary px-1.5 text-center text-[10px] text-primary-foreground">{unread[c.id]}</span> : null}<span className="text-[10px] text-muted-foreground">{last ? new Date(last.created_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"}) : ""}</span></div>
@@ -366,7 +366,7 @@ function Messenger() {
 
       <main className={`min-w-0 flex-1 ${activeId ? "flex" : "hidden md:flex"} flex-col`}>
         {!active ? <EmptyState onNew={() => setShowNew(true)} /> : <>
-          <header className="flex min-h-16 items-center gap-3 border-b border-border px-3">
+          <header className="chat-header flex min-h-16 items-center gap-3 border-b border-border px-3">
             <button className="icon-btn md:hidden" onClick={() => setActiveId(null)}><Menu /></button>
             <Avatar name={activeTitle} url={active.avatar_url} />
             <button className="min-w-0 flex-1 text-right" onClick={() => active.type === "group" && setShowMembers(true)}>
@@ -377,14 +377,14 @@ function Messenger() {
             <button className="icon-btn" onClick={() => setShowMembers(true)}><MoreVertical /></button>
           </header>
 
-          <div className="chat-grid min-h-0 flex-1 overflow-y-auto px-3 py-5">
+          <div className="message-list chat-grid min-h-0 flex-1 overflow-y-auto px-3 py-5">
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
               {messages.map((m) => <MessageBubble key={m.id} message={m} own={m.sender_id === session.id} profile={profiles[m.sender_id]} attachment={attachments[m.id]?.[0]} onReply={() => setReplyTo(m)} onEdit={() => {setEditing(m);setComposer(m.body ?? "");}} onDelete={async()=>{await deleteMessage(m.id);setMessages(await loadMessages(active.id));}} onDeleteForMe={async()=>{await deleteForMe(m.id);setMessages(await loadMessages(active.id));}} onSave={async()=>{await saveMessage(session.id,m.id,{body:m.body,message_type:m.message_type});showNotice("پیام ذخیره شد.");}} onReact={async()=>{await toggleReaction(m.id,session.id,"❤️");}} />)}
               {!messages.length && <div className="m-auto rounded-2xl bg-card/80 px-5 py-3 text-sm text-muted-foreground">اولین پیام را بفرست.</div>}
             </div>
           </div>
 
-          <div className="border-t border-border bg-card p-2">
+          <div className="composer-panel border-t border-border bg-card p-2">
             {replyTo && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 rounded-xl bg-muted px-3 py-2 text-xs"><span className="flex-1 truncate">پاسخ به: {replyTo.body ?? "پیام صوتی"}</span><button onClick={()=>setReplyTo(null)}><X className="size-4"/></button></div>}
             {editing && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 rounded-xl bg-muted px-3 py-2 text-xs"><Pencil className="size-4"/><span className="flex-1">ویرایش پیام</span><button onClick={()=>{setEditing(null);setComposer("")}}><X className="size-4"/></button></div>}
             <div className="mx-auto flex max-w-4xl items-end gap-2">
@@ -423,7 +423,7 @@ function MessageBubble({message,own,profile,attachment,onReply,onEdit,onDelete,o
   useEffect(()=>{if(attachment?.storage_path)getAttachmentUrl(attachment.storage_path).then(setUrl).catch(()=>{});},[attachment?.storage_path]);
   const isAudio=message.message_type==="audio"||message.message_type==="voice";
   const isVideo=message.message_type==="video";
-  return <div className={`group flex ${own?"justify-start":"justify-end"}`}><div className={`relative max-w-[min(80%,620px)] rounded-2xl px-3 py-2 shadow-sm ${own?"bg-primary text-primary-foreground rounded-br-md":"bg-card border border-border rounded-bl-md"}`}>
+  return <div className={`message-row group flex ${own?"justify-start":"justify-end"}`}><div className={`message-bubble relative max-w-[min(80%,620px)] rounded-2xl px-3 py-2 shadow-sm ${own?"is-own bg-primary text-primary-foreground rounded-br-md":"is-other bg-card border border-border rounded-bl-md"}`}>
     {!own&&<div className="mb-1 text-[11px] font-bold opacity-70">{profile?.display_name??"کاربر"}</div>}
     {attachment&&url&&(attachment.mime_type?.startsWith("image/")?<img src={url} alt="" className="mb-2 max-h-80 max-w-full rounded-xl object-contain"/>:isAudio?<audio src={url} controls preload="metadata" className="w-full max-w-[320px]"/>:isVideo?<video src={url} controls playsInline preload="metadata" className="mb-2 max-h-80 max-w-full rounded-xl"/>:<a href={url} target="_blank" rel="noreferrer" className="mb-1 block underline">{attachment.file_name??"فایل"}</a>)}
     {message.body&&<div className="whitespace-pre-wrap break-words text-sm">{message.body}</div>}
