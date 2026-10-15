@@ -268,3 +268,214 @@ button, input, textarea, select {
     background-image: none;
   }
 }
+
+
+/* Refined responsive messenger surfaces */
+.app-shell {
+  background:
+    radial-gradient(ellipse at 10% 0%, color-mix(in oklab, var(--primary) 7%, transparent), transparent 42%),
+    var(--background);
+}
+
+.chat-sidebar {
+  width: min(100%, 340px);
+  background: color-mix(in oklab, var(--card) 96%, var(--background));
+  border-color: color-mix(in oklab, var(--border) 78%, transparent);
+}
+
+.sidebar-top {
+  min-height: 76px;
+  padding: 14px 16px;
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+}
+
+.sidebar-top > img,
+.sidebar-top > div:first-child {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+.sidebar-search {
+  padding: 12px 14px 14px;
+}
+
+.sidebar-search > div {
+  border: 1px solid color-mix(in oklab, var(--border) 88%, transparent);
+  background: color-mix(in oklab, var(--muted) 72%, transparent);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.sidebar-search > div:focus-within {
+  border-color: color-mix(in oklab, var(--primary) 58%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 10%, transparent);
+  background: var(--card);
+}
+
+.conversation-item {
+  position: relative;
+  min-height: 76px;
+  margin: 2px 8px;
+  width: calc(100% - 16px);
+  padding: 12px;
+  border-radius: 16px;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.conversation-item:hover {
+  background: color-mix(in oklab, var(--accent) 65%, transparent);
+}
+
+.conversation-item:active {
+  transform: scale(0.992);
+}
+
+.conversation-item.is-active {
+  background: color-mix(in oklab, var(--primary) 10%, var(--card));
+  box-shadow: inset -3px 0 0 var(--primary);
+}
+
+.conversation-item img,
+.conversation-item > div:first-child {
+  box-shadow: 0 1px 4px color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.chat-header {
+  min-height: 72px;
+  padding-inline: 18px;
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--border) 70%, transparent);
+  z-index: 2;
+}
+
+.chat-header > button:not(.icon-btn) {
+  border-radius: 12px;
+}
+
+.message-list {
+  background-color: var(--chat-surface);
+  background-image:
+    radial-gradient(color-mix(in oklab, var(--primary) 5%, transparent) 0.75px, transparent 0.75px),
+    radial-gradient(color-mix(in oklab, var(--foreground) 2.5%, transparent) 0.75px, transparent 0.75px);
+  background-position: 0 0, 12px 12px;
+  background-size: 24px 24px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.message-row {
+  padding-inline: 2px;
+  margin-block: 3px;
+}
+
+.message-bubble {
+  padding: 10px 13px 8px;
+  line-height: 1.75;
+  box-shadow: 0 2px 7px color-mix(in oklab, var(--foreground) 4%, transparent);
+  overflow-wrap: anywhere;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.message-bubble:hover {
+  box-shadow: 0 5px 16px color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.message-bubble.is-own {
+  border: 1px solid color-mix(in oklab, var(--primary) 70%, transparent);
+  background: linear-gradient(145deg, color-mix(in oklab, var(--primary) 94%, white 6%), var(--chat-own));
+}
+
+.message-bubble.is-other {
+  border-color: color-mix(in oklab, var(--border) 84%, transparent);
+  background: color-mix(in oklab, var(--card) 96%, var(--chat-surface));
+}
+
+.composer-panel {
+  padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+  background: color-mix(in oklab, var(--card) 95%, transparent);
+  backdrop-filter: blur(16px);
+  border-color: color-mix(in oklab, var(--border) 84%, transparent);
+}
+
+.composer-panel .mx-auto.flex.max-w-4xl.items-end {
+  padding: 5px;
+  border: 1px solid color-mix(in oklab, var(--border) 92%, transparent);
+  border-radius: 20px;
+  background: color-mix(in oklab, var(--muted) 50%, var(--card));
+  box-shadow: 0 3px 14px color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+.composer-panel input:not([type="file"]) {
+  min-height: 44px;
+  border-radius: 14px;
+  background: transparent;
+}
+
+.composer-panel input:not([type="file"]):focus {
+  outline: none;
+}
+
+.icon-btn {
+  transition: color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+button:focus-visible, input:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 75%, white);
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  .chat-sidebar {
+    width: 340px;
+  }
+  .message-list {
+    padding-inline: clamp(18px, 4vw, 52px);
+  }
+  .composer-panel {
+    padding-inline: clamp(14px, 3vw, 36px);
+  }
+}
+
+@media (max-width: 767px) {
+  .chat-sidebar {
+    max-width: none;
+    border-left: 0;
+  }
+  .sidebar-top {
+    min-height: 70px;
+    padding-inline: 14px;
+  }
+  .chat-header {
+    min-height: 64px;
+    padding-inline: 10px;
+    gap: 8px;
+  }
+  .message-list {
+    padding: 14px 10px;
+    background-image: none;
+  }
+  .message-bubble {
+    max-width: min(88vw, 620px);
+    padding: 9px 11px 7px;
+  }
+  .composer-panel {
+    padding: 8px 8px max(9px, env(safe-area-inset-bottom));
+  }
+  .composer-panel .mx-auto.flex.max-w-4xl.items-end {
+    gap: 4px;
+    border-radius: 17px;
+  }
+  .composer-panel .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversation-item, .message-bubble, .icon-btn, .sidebar-search > div {
+    transition: none;
+  }
+}
