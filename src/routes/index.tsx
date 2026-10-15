@@ -8,7 +8,7 @@ import {
 import {
   addMember, createAttachmentMessage, createDirectConversation, createGroup,
   deleteMessage, editMessage, ensureProfile, getAttachmentUrl, getMessageAttachments,
-  loadConversations, loadMembers, loadMessages, loadProfiles, searchProfiles,
+  loadConversations, loadLatestMessage, loadMembers, loadMessages, loadProfiles, searchProfiles,
   sendMessage, setPresence, supabase, toggleReaction,
 } from "@/lib/messenger";
 import { CallOverlay } from "@/components/CallOverlay";
@@ -102,6 +102,8 @@ function Messenger() {
         const convs = await loadConversations(session.id);
         if (cancelled) return;
         setConversations(convs);
+        // Show the first conversation immediately; member/profile/preview requests can finish afterward.
+        if (convs[0]) setActiveId((current) => current ?? convs[0].id);
         try {
           const counts = await getUnreadCounts();
           const um: Record<string, number> = {};
@@ -126,13 +128,9 @@ function Messenger() {
         if (!cancelled) setProfiles(map);
         const latest: Record<string, Msg | undefined> = {};
         await Promise.all(convs.map(async (c) => {
-          const rows = await loadMessages(c.id);
-          latest[c.id] = rows.at(-1);
+          latest[c.id] = await loadLatestMessage(c.id);
         }));
-        if (!cancelled) {
-          setLastMessages(latest);
-          if (!activeId && convs[0]) setActiveId(convs[0].id);
-        }
+        if (!cancelled) setLastMessages(latest);
       } catch (e) {
         showNotice(e instanceof Error ? e.message : "خطا در بارگذاری");
       }
