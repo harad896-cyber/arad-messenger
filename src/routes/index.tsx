@@ -356,7 +356,7 @@ function Messenger() {
               <Avatar name={title} url={c.avatar_url} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2"><span className="truncate font-medium">{title}</span>{unread[c.id] ? <span className="min-w-5 rounded-full bg-primary px-1.5 text-center text-[10px] text-primary-foreground">{unread[c.id]}</span> : null}<span className="text-[10px] text-muted-foreground">{last ? new Date(last.created_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"}) : ""}</span></div>
-                <div className="truncate text-xs text-muted-foreground">{last?.body ?? (last?.message_type === "audio" ? "پیام صوتی" : "فایل") ?? "گفتگوی جدید"}</div>
+                <div className="truncate text-xs text-muted-foreground">{last ? (last.body?.trim() || (last.message_type === "audio" || last.message_type === "voice" ? "🎙️ پیام صوتی" : last.message_type === "video" ? "🎬 ویدیو" : last.message_type === "image" ? "🖼️ عکس" : "📎 فایل")) : "هنوز پیامی نیست"}</div>
               </div>
             </button>;
           })}
@@ -408,7 +408,7 @@ function Messenger() {
 }
 
 function AuthScreen({mode,setMode,email,setEmail,password,setPassword,name,setName,username,setUsername,error,busy,onSubmit}:{mode:"login"|"signup";setMode:(x:"login"|"signup")=>void;email:string;setEmail:(x:string)=>void;password:string;setPassword:(x:string)=>void;name:string;setName:(x:string)=>void;username:string;setUsername:(x:string)=>void;error:string;busy:boolean;onSubmit:(e:React.FormEvent)=>void}) {
-  return <div dir="rtl" className="grid min-h-screen place-items-center bg-background px-4"><form onSubmit={onSubmit} className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl"><div className="mb-7 text-center"><div className="mx-auto grid size-16 place-items-center rounded-2xl bg-primary text-2xl font-black text-primary-foreground">آ</div><h1 className="mt-4 text-2xl font-black">آراد مسنجر</h1><p className="mt-1 text-sm text-muted-foreground">{mode==="login"?"ورود به حساب":"ساخت حساب جدید"}</p></div>
+  return <div dir="rtl" className="auth-screen grid min-h-screen place-items-center bg-background px-4"><form onSubmit={onSubmit} className="auth-card w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl"><div className="mb-7 text-center"><div className="mx-auto grid size-16 place-items-center rounded-2xl bg-primary text-2xl font-black text-primary-foreground">آ</div><h1 className="mt-4 text-2xl font-black">آراد مسنجر</h1><p className="mt-1 text-sm text-muted-foreground">{mode==="login"?"ورود به حساب":"ساخت حساب جدید"}</p></div>
     {mode==="signup" && <><label className="label">نام</label><input className="field" value={name} onChange={e=>setName(e.target.value)} required/><label className="label">نام کاربری</label><input className="field" value={username} onChange={e=>setUsername(e.target.value)} placeholder="arad_123" required/></>}
     <label className="label">ایمیل</label><input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} required/><label className="label">رمز عبور</label><input className="field" type="password" minLength={6} value={password} onChange={e=>setPassword(e.target.value)} required/>
     {error && <div className="mt-3 rounded-xl bg-destructive/10 p-3 text-xs text-destructive">{error}</div>}<button disabled={busy} className="mt-5 flex h-11 w-full items-center justify-center rounded-xl bg-primary font-bold text-primary-foreground disabled:opacity-50">{busy?<Loader2 className="animate-spin"/>:mode==="login"?"ورود":"ثبت‌نام"}</button>
@@ -416,7 +416,7 @@ function AuthScreen({mode,setMode,email,setEmail,password,setPassword,name,setNa
   </form></div>;
 }
 
-function EmptyState({onNew}:{onNew:()=>void}) { return <div dir="rtl" className="grid h-full place-items-center"><div className="text-center"><div className="mx-auto grid size-20 place-items-center rounded-3xl bg-primary/10 text-primary"><MessageCircle className="size-10"/></div><h2 className="mt-4 text-xl font-bold">آراد مسنجر</h2><p className="mt-1 text-sm text-muted-foreground">یک گفتگو را انتخاب کن یا گفتگوی جدید بساز.</p><button onClick={onNew} className="mt-5 rounded-xl bg-primary px-5 py-2.5 font-bold text-primary-foreground">گفتگوی جدید</button></div></div>; }
+function EmptyState({onNew}:{onNew:()=>void}) { return <div dir="rtl" className="empty-state grid h-full place-items-center"><div className="empty-state-content text-center"><div className="empty-state-icon mx-auto grid size-20 place-items-center rounded-3xl bg-primary/10 text-primary"><MessageCircle className="size-10"/></div><h2 className="mt-4 text-xl font-bold">آراد مسنجر</h2><p className="mt-1 text-sm text-muted-foreground">یک گفتگو را انتخاب کن یا گفتگوی جدید بساز.</p><button onClick={onNew} className="mt-5 rounded-xl bg-primary px-5 py-2.5 font-bold text-primary-foreground">گفتگوی جدید</button></div></div>; }
 
 function MessageBubble({message,own,profile,attachment,onReply,onEdit,onDelete,onDeleteForMe,onSave,onReact}:{message:Msg;own:boolean;profile:Profile|undefined;attachment:any;onReply:()=>void;onEdit:()=>void;onDelete:()=>Promise<void>;onDeleteForMe:()=>Promise<void>;onSave:()=>Promise<void>;onReact:()=>Promise<void>}) {
   const [url,setUrl]=useState("");
